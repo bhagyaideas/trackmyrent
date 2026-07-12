@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TrackMyRent – Rent Dashboard</title>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Feather Icons -->
+  <script src="https://unpkg.com/feather-icons"></script>
+
+  <style>
+    /* ── CSS Variables ───────────────────────────────────── */
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #252836;
+      --border: #2e3347;
+      --accent: #6c63ff;
+      --accent2: #48cfad;
+      --accent3: #fc5c65;
+      --accent4: #fd9644;
+      --text: #e4e6f0;
+      --text-muted: #7b82a4;
+      --success: #48cfad;
+      --danger: #fc5c65;
+      --warning: #fd9644;
+      --info: #45aaf2;
+      --radius: 14px;
+      --shadow: 0 4px 24px rgba(0,0,0,.4);
+    }
+
+    /* ── Reset & Base ────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    button { cursor: pointer; font-family: inherit; }
+
+    /* ── Scrollbar ───────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    /* ── Layout ──────────────────────────────────────────── */
+    .app { display: flex; min-height: 100vh; }
+
+    /* ── Sidebar ─────────────────────────────────────────── */
+    .sidebar {
+      width: 240px;
+      min-height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      left: 0; top: 0; bottom: 0;
+      z-index: 100;
+      transition: transform .3s;
+    }
+    .sidebar-logo {
+      padding: 24px 20px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .sidebar-logo .logo-text {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .sidebar-logo .logo-text span { color: var(--accent); }
+    .sidebar-nav { flex: 1; padding: 12px 0; }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: all .2s;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active {
+      background: rgba(108,99,255,.12);
+      color: var(--accent);
+      border-left-color: var(--accent);
+    }
+    .nav-item .badge {
+      margin-left: auto;
+      background: var(--danger);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 999px;
+      display: none;
+    }
+    .nav-item .badge.show { display: block; }
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ── Main content ────────────────────────────────────── */
+    .main {
+      margin-left: 240px;
+      flex: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Top bar ─────────────────────────────────────────── */
+    .topbar {
+      height: 60px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .topbar-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .topbar-actions { display: flex; gap: 12px; align-items: center; }
+
+    /* ── Upload button ───────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      transition: all .2s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #7c74ff; transform: translateY(-1px); }
+    .btn-success {
+      background: var(--success);
+      color: #111;
+    }
+    .btn-success:hover { opacity: .85; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+    /* ── Page ────────────────────────────────────────────── */
+    .page { padding: 28px; display: none; }
+    .page.active { display: block; }
+
+    /* ── Page title ──────────────────────────────────────── */
+    .page-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .page-title .subtitle {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+
+    /* ── Stat cards ──────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .stat-card.purple::before { background: var(--accent); }
+    .stat-card.green::before { background: var(--success); }
+    .stat-card.red::before { background: var(--danger); }
+    .stat-card.orange::before { background: var(--warning); }
+    .stat-card.blue::before { background: var(--info); }
+    .stat-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--text-muted);
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+    }
+    .stat-sub { font-size: 12px; color: var(--text-muted); }
+    .stat-icon {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: .1;
+      font-size: 48px;
+    }
+
+    /* ── Charts grid ─────────────────────────────────────── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .chart-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .chart-container { position: relative; height: 260px; }
+
+    /* ── Table card ──────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th {
+      background: var(--surface2);
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--text-muted);
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td {
+      padding: 12px 16px;
+      color: var(--text);
+      vertical-align: middle;
+    }
+    .amount-positive { color: var(--success); font-weight: 700; }
+    .amount-negative { color: var(--danger); font-weight: 600; }
+
+    /* ── Badges ──────────────────────────────────────────── */
+    .badge-pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge-green { background: rgba(72,207,173,.15); color: var(--success); }
+    .badge-red { background: rgba(252,92,101,.15); color: var(--danger); }
+    .badge-purple { background: rgba(108,99,255,.15); color: var(--accent); }
+    .badge-orange { background: rgba(253,150,68,.15); color: var(--warning); }
+    .badge-blue { background: rgba(69,170,242,.15); color: var(--info); }
+    .badge-gray { background: rgba(123,130,164,.15); color: var(--text-muted); }
+
+    /* ── Upload zone ─────────────────────────────────────── */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 60px 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .25s;
+      background: var(--surface);
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--accent);
+      background: rgba(108,99,255,.05);
+    }
+    .upload-zone input[type=file] {
+      position: absolute; inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%; height: 100%;
+    }
+    .upload-icon { font-size: 48px; margin-bottom: 16px; opacity: .5; }
+    .upload-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .upload-sub { font-size: 14px; color: var(--text-muted); }
+
+    /* ── Progress bar ────────────────────────────────────── */
+    .progress-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 3px;
+      transition: width .4s ease;
+    }
+
+    /* ── Alert ───────────────────────────────────────────── */
+    .alert {
+      padding: 14px 18px;
+      border-radius: 10px;
+      font-size: 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .alert-success { background: rgba(72,207,173,.12); border: 1px solid rgba(72,207,173,.3); color: var(--success); }
+    .alert-error { background: rgba(252,92,101,.12); border: 1px solid rgba(252,92,101,.3); color: var(--danger); }
+    .alert-warning { background: rgba(253,150,68,.12); border: 1px solid rgba(253,150,68,.3); color: var(--warning); }
+    .alert-info { background: rgba(69,170,242,.12); border: 1px solid rgba(69,170,242,.3); color: var(--info); }
+
+    /* ── Missed Rent cards ───────────────────────────────── */
+    .missed-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+    .missed-card {
+      background: var(--surface);
+      border: 1px solid rgba(252,92,101,.35);
+      border-left: 4px solid var(--danger);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .missed-card .tenant-name {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .missed-months {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .month-chip {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(252,92,101,.15);
+      color: var(--danger);
+    }
+    .month-chip.paid {
+      background: rgba(72,207,173,.12);
+      color: var(--success);
+    }
+
+    /* ── Sender detail panel ─────────────────────────────── */
+    .sender-filter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .sender-chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .sender-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .sender-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* ── Ledger ──────────────────────────────────────────── */
+    .ledger-row-amount { font-size: 15px; font-weight: 800; color: var(--success); }
+    .ledger-months { display: flex; flex-wrap: wrap; gap: 4px; max-width: 300px; }
+    .ledger-month-chip {
+      padding: 2px 7px;
+      background: rgba(108,99,255,.15);
+      color: var(--accent);
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    /* ── Loading spinner ─────────────────────────────────── */
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin: 40px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ───────────────────────────────────────────── */
+    #toast-container {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .toast {
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      max-width: 320px;
+      box-shadow: var(--shadow);
+      animation: toastIn .3s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toast-success { background: #1f3b30; border-left: 4px solid var(--success); color: var(--success); }
+    .toast-error { background: #3b1f24; border-left: 4px solid var(--danger); color: var(--danger); }
+    .toast-info { background: #1f2e3b; border-left: 4px solid var(--info); color: var(--info); }
+    @keyframes toastIn { from { transform: translateX(100%); opacity:0; } to { transform: translateX(0); opacity:1; } }
+
+    /* ── Hamburger ───────────────────────────────────────── */
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .hamburger span {
+      display: block;
+      width: 22px; height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: all .3s;
+    }
+
+    /* ── Search input ────────────────────────────────────── */
+    .search-input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      color: var(--text);
+      font-size: 13px;
+      width: 220px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--text-muted); }
+
+    /* ── Pagination ──────────────────────────────────────── */
+    .pagination {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+      padding: 16px;
+    }
+    .page-btn {
+      width: 32px; height: 32px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 13px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .page-btn:hover, .page-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* ── Empty state ─────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 16px; opacity: .4; }
+    .empty-state p { font-size: 15px; }
+
+    /* ── Month timeline ──────────────────────────────────── */
+    .timeline-months {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .timeline-month {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .timeline-month.paid { background: rgba(72,207,173,.15); color: var(--success); }
+    .timeline-month.missed { background: rgba(252,92,101,.15); color: var(--danger); }
+
+    /* ── Responsive ──────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      .sidebar.open {
+        transform: translateX(0);
+        box-shadow: 4px 0 20px rgba(0,0,0,.5);
+      }
+      .main { margin-left: 0; }
+      .hamburger { display: flex; }
+      .charts-grid { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .page { padding: 16px; }
+      .search-input { width: 100%; }
+    }
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── Sidebar ─────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🏠</div>
+      <div class="logo-text">Track<span>MyRent</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" data-page="dashboard">
+        <i data-feather="home" width="16" height="16"></i> Dashboard
+      </div>
+      <div class="nav-item" data-page="upload">
+        <i data-feather="upload" width="16" height="16"></i> Upload Statement
+      </div>
+      <div class="nav-item" data-page="rents">
+        <i data-feather="bar-chart-2" width="16" height="16"></i> Rent Analysis
+      </div>
+      <div class="nav-item" data-page="ledger">
+        <i data-feather="book" width="16" height="16"></i> Ledger
+      </div>
+      <div class="nav-item" data-page="missed">
+        <i data-feather="alert-triangle" width="16" height="16"></i> Missed Rents
+        <span class="badge" id="missed-badge">0</span>
+      </div>
+      <div class="nav-item" data-page="transactions">
+        <i data-feather="list" width="16" height="16"></i> All Transactions
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      Bhagyaraj Mallampalli<br/>
+      <span style="opacity:.5; font-size:11px;">Rent Tracker v1.0</span>
+    </div>
+  </aside>
+
+  <!-- ── Main ──────────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- Top bar -->
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="hamburger" id="hamburger">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="topbar-title" id="page-title">Dashboard</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary" onclick="showPage('upload')">
+          <i data-feather="upload" width="14" height="14"></i> Upload
+        </button>
+        <button class="btn btn-outline" onclick="refreshAll()">
+          <i data-feather="refresh-cw" width="14" height="14"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── PAGE: Dashboard ─────────────────────────────── -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-title">
+        📊 Dashboard
+        <span class="subtitle">Rent & Transaction Overview</span>
+      </div>
+
+      <!-- Stat cards -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="spinner"></div>
+      </div>
+
+      <!-- Missed Rent Alert Banner -->
+      <div id="missed-banner"></div>
+
+      <!-- Charts -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">
+            <i data-feather="trending-up" width="16" height="16" style="color:var(--success)"></i>
+            Monthly Rent Income
+          </div>
+          <div class="chart-container">
+            <canvas id="chart-monthly"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">
+            <i data-feather="pie-chart" width="16" height="16" style="color:var(--accent)"></i>
+            Rent by Sender
+          </div>
+          <div class="chart-container">
+            <canvas id="chart-sender"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent uploads -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <i data-feather="clock" width="15" height="15"></i> Recent Uploads
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="recent-uploads-table">
+            <thead>
+              <tr>
+                <th>File</th><th>Account Holder</th><th>Date Range</th>
+                <th>Total</th><th>New</th><th>Duplicates</th><th>Uploaded</th>
+              </tr>
+            </thead>
+            <tbody id="recent-uploads-body">
+              <tr><td colspan="7" class="empty-state"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PAGE: Upload ─────────────────────────────────── -->
+    <div class="page" id="page-upload">
+      <div class="page-title">
+        <i data-feather="upload-cloud" width="22" height="22"></i>
+        Upload Bank Statement
+      </div>
+
+      <div class="card" style="max-width:700px; margin: 0 auto 28px;">
+        <div class="card-header">
+          <div class="card-title">
+            <i data-feather="file-text" width="15" height="15"></i>
+            Upload ICICI Bank XLS Statement
+          </div>
+        </div>
+        <div style="padding:24px">
+          <div id="upload-alert"></div>
+
+          <div class="upload-zone" id="upload-zone">
+            <input type="file" id="file-input" accept=".xls,.xlsx" onchange="handleFileChange(event)" />
+            <div class="upload-icon">📂</div>
+            <div class="upload-title">Drop your statement here</div>
+            <div class="upload-sub">or click to browse · Supports .xls and .xlsx</div>
+          </div>
+
+          <div id="file-preview" style="display:none; margin-top:16px;">
+            <div class="alert alert-info">
+              <i data-feather="file" width="16" height="16"></i>
+              <div>
+                <strong id="file-name">file.xls</strong><br/>
+                <span id="file-size" style="font-size:12px; opacity:.7"></span>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="upload-btn" onclick="uploadFile()" style="width:100%; justify-content:center; padding:12px">
+              <i data-feather="upload" width="15" height="15"></i>
+              Process & Import Transactions
+            </button>
+          </div>
+
+          <div id="upload-progress" style="display:none; margin-top:16px;">
+            <div style="font-size:13px; color:var(--text-muted); margin-bottom:6px">Processing...</div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+          </div>
+
+          <div id="upload-result" style="display:none; margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:700px; margin:0 auto;">
+        <div class="card-header">
+          <div class="card-title">
+            <i data-feather="info" width="15" height="15"></i> What gets extracted?
+          </div>
+        </div>
+        <div style="padding:20px; font-size:13px; color:var(--text-muted); line-height:1.8;">
+          <ul style="padding-left:18px; display:flex; flex-direction:column; gap:6px;">
+            <li>✅ All deposit transactions (UPI, IMPS, NEFT, RTGS)</li>
+            <li>✅ Sender name extracted from transaction remarks</li>
+            <li>✅ Automatically classified as <strong style="color:var(--success)">Rent</strong> or Other</li>
+            <li>✅ Duplicate detection — existing entries are skipped</li>
+            <li>✅ Tenants auto-registered from rent payments</li>
+            <li>⚠️ Netflix, Amazon, AutoPay, etc. are excluded from rent</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PAGE: Rent Analysis ──────────────────────────── -->
+    <div class="page" id="page-rents">
+      <div class="page-title">
+        <i data-feather="bar-chart-2" width="22" height="22"></i>
+        Rent Analysis
+        <span class="subtitle">By Sender &amp; Month</span>
+      </div>
+
+      <!-- Sender filter chips -->
+      <div class="sender-filter" id="sender-chips"></div>
+
+      <!-- Per-sender monthly chart -->
+      <div class="chart-card" style="margin-bottom:20px;" id="sender-chart-card">
+        <div class="chart-title" id="sender-chart-title">
+          <i data-feather="bar-chart" width="16" height="16" style="color:var(--accent)"></i>
+          Monthly Payments — All Senders
+        </div>
+        <div class="chart-container" style="height:300px">
+          <canvas id="chart-sender-monthly"></canvas>
+        </div>
+      </div>
+
+      <!-- Rent table -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <i data-feather="table" width="15" height="15"></i> Rent Details
+          </div>
+          <div>
+            <input class="search-input" type="text" id="rent-search"
+              placeholder="Search sender…" oninput="filterRentTable()">
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Sender</th><th>Phone</th><th>Month</th><th>Amount (₹)</th>
+                <th>Payments</th><th>First Date</th><th>Last Date</th>
+              </tr>
+            </thead>
+            <tbody id="rent-tbody">
+              <tr><td colspan="6"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PAGE: Ledger ─────────────────────────────────── -->
+    <div class="page" id="page-ledger">
+      <div class="page-title">
+        <i data-feather="book" width="22" height="22"></i>
+        Rent Ledger
+        <span class="subtitle">Total received by sender (income only)</span>
+      </div>
+
+      <!-- Ledger summary chart -->
+      <div class="chart-card" style="margin-bottom:20px;">
+        <div class="chart-title">
+          <i data-feather="bar-chart-2" width="16" height="16" style="color:var(--accent2)"></i>
+          Total Rent Received per Sender
+        </div>
+        <div class="chart-container" style="height:280px;">
+          <canvas id="chart-ledger"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <i data-feather="list" width="15" height="15"></i> Ledger Summary
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Sender / Tenant</th><th>Phone</th><th>Total Received (₹)</th>
+                <th>Payments</th><th>Months Paid</th><th>First Payment</th>
+                <th>Last Payment</th><th>Paid Months</th>
+              </tr>
+            </thead>
+            <tbody id="ledger-tbody">
+              <tr><td colspan="9"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PAGE: Missed Rents ───────────────────────────── -->
+    <div class="page" id="page-missed">
+      <div class="page-title">
+        <i data-feather="alert-triangle" width="22" height="22" style="color:var(--danger)"></i>
+        Missed Rents
+        <span class="subtitle">Based on payment frequency per sender</span>
+      </div>
+
+      <div id="missed-container">
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+    <!-- ── PAGE: All Transactions ───────────────────────── -->
+    <div class="page" id="page-transactions">
+      <div class="page-title">
+        <i data-feather="list" width="22" height="22"></i>
+        All Transactions
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <i data-feather="database" width="15" height="15"></i> Transaction Log
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <select id="rent-filter" class="search-input" style="width:auto" onchange="loadTransactions()">
+              <option value="">All</option>
+              <option value="1">Rent Only</option>
+            </select>
+            <input class="search-input" type="text" id="tx-search"
+              placeholder="Search…" oninput="filterTxTable()">
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Date</th><th>Sender</th><th>Remarks</th>
+                <th>Deposit (₹)</th><th>Withdrawal (₹)</th><th>Balance (₹)</th>
+                <th>Type</th><th>Rent?</th>
+              </tr>
+            </thead>
+            <tbody id="tx-tbody">
+              <tr><td colspan="9"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination" id="tx-pagination"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────
+// Derive the API base from the current page URL so the app works whether
+// served directly (http://host:3001/ or http://host:8081/) or
+// behind nginx at a sub-path (http://host/rent/).
+// e.g. pathname "/rent/ledger" → base "/rent"
+//      pathname "/"             → base ""
+const _segments = window.location.pathname.replace(/\/$/, '').split('/');
+const _rentIdx  = _segments.indexOf('rent');
+const API_BASE  = _rentIdx >= 0
+  ? _segments.slice(0, _rentIdx + 1).join('/')   // → "/rent"
+  : '';                                            // → ""  (direct access)
+
+let dashboardData = null;
+let rentData = [];
+let ledgerData = [];
+let missedData = [];
+let txData = { rows: [], total: 0, page: 1 };
+let chartMonthly, chartSender, chartSenderMonthly, chartLedger;
+let selectedSender = null;
+let selectedFile = null;
+let txCurrentPage = 1;
+
+// ─── Chart Palette ────────────────────────────────────────────────────────
+const PALETTE = [
+  '#6c63ff','#48cfad','#fc5c65','#fd9644','#45aaf2',
+  '#a55eea','#26de81','#fd79a8','#fdcb6e','#74b9ff',
+  '#00b894','#e17055','#0984e3','#6c5ce7','#fab1a0',
+];
+const PALETTE_ALPHA = PALETTE.map(c => c + '33');
+
+Chart.defaults.color = '#7b82a4';
+Chart.defaults.borderColor = '#2e3347';
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+
+// ─── Navigation ───────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const page = document.getElementById('page-' + name);
+  const nav = document.querySelector(`.nav-item[data-page="${name}"]`);
+  if (page) page.classList.add('active');
+  if (nav) nav.classList.add('active');
+  document.getElementById('page-title').textContent =
+    name.charAt(0).toUpperCase() + name.slice(1).replace(/-/g,' ');    // Lazy load – missed rents always reloads so the page renders even
+    // when the dashboard banner already populated missedData globally.
+    if (name === 'rents' && rentData.length === 0) loadRentData();
+    if (name === 'ledger' && ledgerData.length === 0) loadLedger();
+    if (name === 'missed') loadMissed();
+    if (name === 'transactions') loadTransactions();
+
+  // Close mobile sidebar
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => showPage(item.dataset.page));
+});
+
+document.getElementById('hamburger').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+// ─── Format helpers ────────────────────────────────────────────────────────
+function fmtMoney(n) {
+  if (!n && n !== 0) return '—';
+  return '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  const parts = String(d).split('T')[0].split('-');
+  if (parts.length < 3) return d;
+  return parts[2] + '/' + parts[1] + '/' + parts[0];
+}
+function fmtMonthYear(my) {
+  if (!my) return '—';
+  const [y, m] = my.split('-');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return months[parseInt(m) - 1] + ' ' + y;
+}
+function truncate(str, n = 50) {
+  if (!str) return '—';
+  return str.length > n ? str.substring(0, n) + '…' : str;
+}
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  el.innerHTML = `<span>${icons[type] || 'ℹ️'}</span> ${msg}`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// ─── API helper ───────────────────────────────────────────────────────────
+// All calls go through here. API_BASE is prepended so:
+//   apiFetch('/api/dashboard') → fetch('/rent/api/dashboard')  (via nginx)
+//                              → fetch('/api/dashboard')        (direct)
+async function apiFetch(path, opts = {}) {
+  const url = API_BASE + path;
+  const res = await fetch(url, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(err.error || 'API error');
+  }
+  return res.json();
+}
+
+// ─── Destroy chart helper ─────────────────────────────────────────────────
+function destroyChart(chart) {
+  if (chart) { chart.destroy(); }
+  return null;
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    dashboardData = await apiFetch('/api/dashboard');
+    renderStats(dashboardData.summary);
+    renderMonthlyChart(dashboardData.monthlyRents);
+    renderSenderChart(dashboardData);
+    renderRecentUploads(dashboardData.recentUploads);
+    renderMissedBanner();
+  } catch (e) {
+    toast('Dashboard error: ' + e.message, 'error');
+  }
+}
+
+function renderStats(s) {
+  const grid = document.getElementById('stats-grid');
+  const rent = parseFloat(s.total_rent_received) || 0;
+  const dep = parseFloat(s.total_deposits) || 0;
+  const wit = parseFloat(s.total_withdrawals) || 0;
+  const missed = missedData.length;
+
+  grid.innerHTML = `
+    <div class="stat-card purple">
+      <div class="stat-label">Total Rent Received</div>
+      <div class="stat-value">${fmtMoney(rent)}</div>
+      <div class="stat-sub">${s.total_rent_txns || 0} payments</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Total Deposits</div>
+      <div class="stat-value">${fmtMoney(dep)}</div>
+      <div class="stat-sub">All incoming</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Total Withdrawals</div>
+      <div class="stat-value">${fmtMoney(wit)}</div>
+      <div class="stat-sub">All outgoing</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-label">Active Tenants</div>
+      <div class="stat-value">${(dashboardData.tenants || []).length}</div>
+      <div class="stat-sub">Rent senders</div>
+    </div>
+    <div class="stat-card ${missed > 0 ? 'red' : 'blue'}">
+      <div class="stat-label">Missed Rents</div>
+      <div class="stat-value" style="color:${missed > 0 ? 'var(--danger)' : 'var(--success)'}">${missed}</div>
+      <div class="stat-sub">${missed > 0 ? 'Needs attention!' : 'All good ✓'}</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">Total Transactions</div>
+      <div class="stat-value">${s.total_transactions || 0}</div>
+      <div class="stat-sub">In database</div>
+    </div>
+  `;
+}
+
+function renderMonthlyChart(monthlyRents) {
+  chartMonthly = destroyChart(chartMonthly);
+  const labels = monthlyRents.map(r => fmtMonthYear(r.month_year));
+  const data = monthlyRents.map(r => parseFloat(r.total));
+  const ctx = document.getElementById('chart-monthly').getContext('2d');
+  chartMonthly = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Rent Income (₹)',
+        data,
+        backgroundColor: PALETTE_ALPHA[0],
+        borderColor: PALETTE[0],
+        borderWidth: 2,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ' ₹' + ctx.raw.toLocaleString('en-IN')
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: {
+          grid: { color: '#2e334730' },
+          ticks: { callback: v => '₹' + (v/1000).toFixed(0) + 'k' }
+        }
+      }
+    }
+  });
+}
+
+function renderSenderChart(data) {
+  chartSender = destroyChart(chartSender);
+  const tenants = data.tenants || [];
+  const labels = tenants.map(t => t.display_name || t.name);
+  const values = tenants.map(t => parseFloat(t.total_paid) || 0);
+  const ctx = document.getElementById('chart-sender').getContext('2d');
+  chartSender = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: PALETTE,
+        borderColor: '#1a1d27',
+        borderWidth: 3,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '60%',
+      plugins: {
+        legend: { position: 'right', labels: { padding: 10, font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ₹${ctx.raw.toLocaleString('en-IN')}`
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderRecentUploads(uploads) {
+  const tbody = document.getElementById('recent-uploads-body');
+  if (!uploads || uploads.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="icon">📂</div><p>No uploads yet</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = uploads.map(u => `
+    <tr>
+      <td><span style="font-size:11px;color:var(--accent)">${u.filename}</span></td>
+      <td>${u.account_holder || '—'}</td>
+      <td style="font-size:12px">${fmtDate(u.date_from)} – ${fmtDate(u.date_to)}</td>
+      <td><span class="badge-pill badge-blue">${u.total_rows}</span></td>
+      <td><span class="badge-pill badge-green">${u.new_transactions}</span></td>
+      <td><span class="badge-pill badge-gray">${u.duplicate_transactions}</span></td>
+      <td style="font-size:11px; color:var(--text-muted)">${timeAgo(u.uploaded_at)}</td>
+    </tr>
+  `).join('');
+}
+
+async function renderMissedBanner() {
+  try {
+    missedData = await apiFetch('/api/missed-rents');
+    const badge = document.getElementById('missed-badge');
+    if (missedData.length > 0) {
+      badge.textContent = missedData.length;
+      badge.classList.add('show');
+      document.getElementById('missed-banner').innerHTML = `
+        <div class="alert alert-warning" style="cursor:pointer" onclick="showPage('missed')">
+          <i data-feather="alert-triangle" width="16" height="16"></i>
+          <div>
+            <strong>${missedData.length} sender(s) have missed rent months.</strong>
+            Click to view details →
+          </div>
+        </div>`;
+      feather.replace();
+    } else {
+      badge.classList.remove('show');
+      document.getElementById('missed-banner').innerHTML = `
+        <div class="alert alert-success" style="margin-bottom:20px">
+          <i data-feather="check-circle" width="16" height="16"></i>
+          <span>All tenants are up to date on their rent payments! 🎉</span>
+        </div>`;
+      feather.replace();
+    }
+    // Also update stats
+    if (dashboardData) renderStats(dashboardData.summary);
+  } catch (e) {
+    console.error('Missed banner error:', e);
+  }
+}
+
+// ─── Upload ───────────────────────────────────────────────────────────────
+const uploadZone = document.getElementById('upload-zone');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) previewFile(file);
+});
+
+function handleFileChange(event) {
+  const file = event.target.files[0];
+  if (file) previewFile(file);
+}
+
+function previewFile(file) {
+  selectedFile = file;
+  document.getElementById('file-name').textContent = file.name;
+  document.getElementById('file-size').textContent =
+    (file.size / 1024).toFixed(1) + ' KB · ' + file.type;
+  document.getElementById('file-preview').style.display = 'block';
+  document.getElementById('upload-result').style.display = 'none';
+  document.getElementById('upload-alert').innerHTML = '';
+  feather.replace();
+}
+
+async function uploadFile() {
+  if (!selectedFile) return;
+  const btn = document.getElementById('upload-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i data-feather="loader" width="15" height="15"></i> Processing…';
+  feather.replace();
+
+  document.getElementById('upload-progress').style.display = 'block';
+  let prog = 0;
+  const progEl = document.getElementById('progress-fill');
+  const iv = setInterval(() => {
+    prog = Math.min(prog + 5, 85);
+    progEl.style.width = prog + '%';
+  }, 150);
+
+  try {
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    const result = await apiFetch('/api/upload', { method: 'POST', body: formData });
+
+    clearInterval(iv);
+    progEl.style.width = '100%';
+
+    const el = document.getElementById('upload-result');
+    el.style.display = 'block';
+    el.innerHTML = `
+      <div class="alert alert-success">
+        <i data-feather="check-circle" width="20" height="20"></i>
+        <div>
+          <strong>Import complete!</strong><br/>
+          Account: ${result.accountHolder} (${result.accountNumber})<br/>
+          Range: ${fmtDate(result.dateFrom)} – ${fmtDate(result.dateTo)}<br/>
+          <span style="color:var(--success)">✅ ${result.newCount} new</span> &nbsp;
+          <span style="color:var(--text-muted)">⏭ ${result.dupCount} skipped (duplicates)</span>
+          of ${result.total} total rows.
+        </div>
+      </div>
+    `;
+    feather.replace();
+    toast(`Imported ${result.newCount} new transactions!`, 'success');
+
+    // Refresh all data
+    rentData = []; ledgerData = []; missedData = [];
+    dashboardData = null;
+    await loadDashboard();
+
+  } catch (e) {
+    clearInterval(iv);
+    document.getElementById('upload-alert').innerHTML =
+      `<div class="alert alert-error"><i data-feather="x-circle" width="16" height="16"></i> ${e.message}</div>`;
+    feather.replace();
+    toast('Upload failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-feather="upload" width="15" height="15"></i> Process & Import Transactions';
+    feather.replace();
+    setTimeout(() => { document.getElementById('upload-progress').style.display = 'none'; }, 800);
+  }
+}
+
+// ─── Rent Analysis ────────────────────────────────────────────────────────
+async function loadRentData() {
+  try {
+    rentData = await apiFetch('/api/rents/by-sender');
+    buildSenderChips();
+    renderRentTable(rentData);
+    renderSenderMonthlyChart(rentData, null);
+  } catch (e) {
+    toast('Rent data error: ' + e.message, 'error');
+  }
+}
+
+function buildSenderChips() {
+  // Build a map of sender → first phone found
+  const phoneMap = {};
+  rentData.forEach(r => { if (r.phone && !phoneMap[r.sender_name]) phoneMap[r.sender_name] = r.phone; });
+
+  const senders = [...new Set(rentData.map(r => r.sender_name))].sort();
+  const container = document.getElementById('sender-chips');
+  container.innerHTML = `
+    <div class="sender-chip active" onclick="selectSender(null, this)">All Senders</div>
+    ${senders.map(s => {
+      const ph = phoneMap[s] ? `<span style="font-size:10px;opacity:.7;margin-left:4px">📞 ${phoneMap[s]}</span>` : '';
+      return `<div class="sender-chip" onclick="selectSender(${JSON.stringify(s)}, this)">${s}${ph}</div>`;
+    }).join('')}
+  `;
+}
+
+function selectSender(name, el) {
+  selectedSender = name;
+  document.querySelectorAll('.sender-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const filtered = name ? rentData.filter(r => r.sender_name === name) : rentData;
+  renderRentTable(filtered);
+  renderSenderMonthlyChart(rentData, name);
+  document.getElementById('sender-chart-title').innerHTML = `
+    <i data-feather="bar-chart" width="16" height="16" style="color:var(--accent)"></i>
+    Monthly Payments — ${name || 'All Senders'}
+  `;
+  feather.replace();
+}
+
+function renderRentTable(data) {
+  const tbody = document.getElementById('rent-tbody');
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="icon">📊</div><p>No rent data found. Upload a statement first.</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(r => `
+    <tr>
+      <td>
+        <div style="font-weight:700">${r.sender_name || '—'}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${r.upi_id || ''}</div>
+      </td>
+      <td>
+        ${r.phone
+          ? `<a href="tel:${r.phone}" style="color:var(--accent2);font-weight:700;font-size:13px;text-decoration:none">
+               📞 ${r.phone}
+             </a>`
+          : '<span style="color:var(--text-muted);font-size:12px">—</span>'}
+      </td>
+      <td><span class="badge-pill badge-purple">${fmtMonthYear(r.month_year)}</span></td>
+      <td class="amount-positive">${fmtMoney(r.amount)}</td>
+      <td><span class="badge-pill badge-blue">${r.tx_count}</span></td>
+      <td style="font-size:12px">${fmtDate(r.first_date)}</td>
+      <td style="font-size:12px">${fmtDate(r.last_date)}</td>
+    </tr>
+  `).join('');
+}
+
+function filterRentTable() {
+  const q = document.getElementById('rent-search').value.toLowerCase();
+  const filtered = rentData.filter(r =>
+    !q || (r.sender_name || '').toLowerCase().includes(q)
+  );
+  renderRentTable(filtered);
+}
+
+function renderSenderMonthlyChart(data, senderFilter) {
+  chartSenderMonthly = destroyChart(chartSenderMonthly);
+
+  const allMonths = [...new Set(data.map(r => r.month_year))].sort();
+  const senders = [...new Set(data.map(r => r.sender_name))].sort();
+
+  const filteredSenders = senderFilter ? [senderFilter] : senders;
+
+  const datasets = filteredSenders.map((sender, i) => {
+    const values = allMonths.map(m => {
+      const row = data.find(r => r.sender_name === sender && r.month_year === m);
+      return row ? parseFloat(row.amount) : 0;
+    });
+    return {
+      label: sender,
+      data: values,
+      backgroundColor: PALETTE[i % PALETTE.length] + '88',
+      borderColor: PALETTE[i % PALETTE.length],
+      borderWidth: 2,
+      borderRadius: 4,
+    };
+  });
+
+  const ctx = document.getElementById('chart-sender-monthly').getContext('2d');
+  chartSenderMonthly = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: allMonths.map(fmtMonthYear),
+      datasets,
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { padding: 8, font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ₹${ctx.raw.toLocaleString('en-IN')}`
+          }
+        }
+      },
+      scales: {
+        x: { stacked: !senderFilter, grid: { display: false } },
+        y: {
+          stacked: !senderFilter,
+          grid: { color: '#2e334730' },
+          ticks: { callback: v => '₹' + (v/1000).toFixed(0) + 'k' }
+        }
+      }
+    }
+  });
+}
+
+// ─── Ledger ───────────────────────────────────────────────────────────────
+async function loadLedger() {
+  try {
+    ledgerData = await apiFetch('/api/ledger');
+    renderLedger();
+    renderLedgerChart();
+  } catch (e) {
+    toast('Ledger error: ' + e.message, 'error');
+  }
+}
+
+function renderLedger() {
+  const tbody = document.getElementById('ledger-tbody');
+  if (!ledgerData || ledgerData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="icon">📒</div><p>No ledger data. Upload a statement first.</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = ledgerData.map((r, i) => {
+    const months = (r.paid_months || '').split(',').filter(Boolean);
+    const chips = months.map(m =>
+      `<span class="ledger-month-chip">${fmtMonthYear(m)}</span>`
+    ).join('');
+    return `
+      <tr>
+        <td style="color:var(--text-muted)">${i + 1}</td>
+        <td>
+          <div style="font-weight:700;font-size:14px">${r.sender_name}</div>
+        </td>
+        <td>
+          ${r.phone
+            ? `<a href="tel:${r.phone}" style="color:var(--accent2);font-weight:700;font-size:13px;text-decoration:none">
+                 📞 ${r.phone}
+               </a>`
+            : '<span style="color:var(--text-muted);font-size:12px">—</span>'}
+        </td>
+        <td class="ledger-row-amount">${fmtMoney(r.total_received)}</td>
+        <td><span class="badge-pill badge-blue">${r.payment_count}</span></td>
+        <td><span class="badge-pill badge-purple">${r.months_paid}</span></td>
+        <td style="font-size:12px">${fmtDate(r.first_payment)}</td>
+        <td style="font-size:12px">${fmtDate(r.last_payment)}</td>
+        <td><div class="ledger-months">${chips}</div></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderLedgerChart() {
+  chartLedger = destroyChart(chartLedger);
+  const sorted = [...ledgerData].sort((a, b) => b.total_received - a.total_received);
+  const ctx = document.getElementById('chart-ledger').getContext('2d');
+  chartLedger = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(r => r.sender_name),
+      datasets: [{
+        label: 'Total Received (₹)',
+        data: sorted.map(r => parseFloat(r.total_received)),
+        backgroundColor: sorted.map((_, i) => PALETTE[i % PALETTE.length] + 'aa'),
+        borderColor: sorted.map((_, i) => PALETTE[i % PALETTE.length]),
+        borderWidth: 2,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ' ₹' + ctx.raw.toLocaleString('en-IN')
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#2e334730' },
+          ticks: { callback: v => '₹' + (v/1000).toFixed(0) + 'k' }
+        },
+        y: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ─── Missed Rents ─────────────────────────────────────────────────────────
+async function loadMissed() {
+  // Show spinner immediately so the user sees activity
+  document.getElementById('missed-container').innerHTML = '<div class="spinner"></div>';
+  try {
+    // Always re-fetch missed rents so the page is always fresh
+    missedData = await apiFetch('/api/missed-rents');
+    // Reuse cached rentData if already loaded, otherwise fetch it
+    if (rentData.length === 0) {
+      rentData = await apiFetch('/api/rents/by-sender');
+    }
+    renderMissed(rentData);
+  } catch (e) {
+    document.getElementById('missed-container').innerHTML =
+      `<div class="alert alert-error"><i data-feather="x-circle" width="16" height="16"></i> Failed to load missed rents: ${e.message}</div>`;
+    feather.replace();
+    toast('Missed rents error: ' + e.message, 'error');
+  }
+}
+
+function renderMissed(rentRows) {
+  const container = document.getElementById('missed-container');
+  const badge = document.getElementById('missed-badge');
+
+  badge.textContent = missedData.length;
+  badge.classList.toggle('show', missedData.length > 0);
+
+  if (missedData.length === 0) {
+    container.innerHTML = `
+      <div class="alert alert-success" style="max-width:500px;margin:40px auto">
+        <i data-feather="check-circle" width="20" height="20"></i>
+        <div>
+          <strong>All Good! 🎉</strong><br/>
+          No missed rent payments detected for any sender.
+        </div>
+      </div>`;
+    feather.replace();
+    return;
+  }
+
+  // Build all months timeline from data
+  const allMonths = [...new Set(rentRows.map(r => r.month_year))].sort();
+
+  // Build phone map from rentRows  (sender → phone)
+  const phoneMap = {};
+  rentRows.forEach(r => { if (r.phone && !phoneMap[r.sender_name]) phoneMap[r.sender_name] = r.phone; });
+
+  container.innerHTML = `
+    <div class="alert alert-warning" style="margin-bottom:24px">
+      <i data-feather="alert-triangle" width="16" height="16"></i>
+      <span><strong>${missedData.length} sender(s)</strong> appear to have missing rent months based on payment history.</span>
+    </div>
+    <div class="missed-grid">
+      ${missedData.map(d => {
+        const paidSet = new Set(d.paid_months);
+        const phone   = phoneMap[d.sender_name];
+        const relevantMonths = allMonths.filter(m => m >= d.first_month && m <= d.last_month);
+        const timeline = relevantMonths.map(m =>
+          paidSet.has(m)
+            ? `<span class="timeline-month paid" title="${fmtMonthYear(m)}">${fmtMonthYear(m)}</span>`
+            : `<span class="timeline-month missed" title="MISSED: ${fmtMonthYear(m)}">❌ ${fmtMonthYear(m)}</span>`
+        ).join('');
+
+        return `
+          <div class="missed-card">
+            <div class="tenant-name">
+              <i data-feather="user" width="16" height="16" style="color:var(--danger)"></i>
+              ${d.sender_name}
+            </div>
+            ${phone ? `<div style="margin-bottom:6px">
+              <a href="tel:${phone}" style="color:var(--accent2);font-weight:700;font-size:13px;text-decoration:none">
+                📞 ${phone}
+              </a>
+            </div>` : ''}
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">
+              Active: ${fmtMonthYear(d.first_month)} – ${fmtMonthYear(d.last_month)}<br/>
+              Paid: ${d.paid_months.length} months &nbsp;|&nbsp;
+              <span style="color:var(--danger);font-weight:700">Missed: ${d.missed_months.length}</span>
+            </div>
+            <div style="font-size:12px;font-weight:600;margin-top:8px;color:var(--text-muted)">MISSED MONTHS:</div>
+            <div class="missed-months">
+              ${d.missed_months.map(m =>
+                `<span class="month-chip">❌ ${fmtMonthYear(m)}</span>`
+              ).join('')}
+            </div>
+            <div style="font-size:12px;font-weight:600;margin-top:12px;color:var(--text-muted)">TIMELINE:</div>
+            <div class="timeline-months">${timeline}</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+  feather.replace();
+}
+
+// ─── All Transactions ─────────────────────────────────────────────────────
+let allTxRows = [];
+
+async function loadTransactions() {
+  try {
+    const isRent = document.getElementById('rent-filter').value;
+    const params = new URLSearchParams({ limit: 500 });
+    if (isRent) params.set('is_rent', isRent);
+    const data = await apiFetch('/api/transactions?' + params);
+    allTxRows = data.rows;
+    filterTxTable();
+  } catch (e) {
+    toast('Transactions error: ' + e.message, 'error');
+  }
+}
+
+function filterTxTable() {
+  const q = document.getElementById('tx-search').value.toLowerCase();
+  const filtered = q
+    ? allTxRows.filter(r =>
+        (r.sender_name || '').toLowerCase().includes(q) ||
+        (r.transaction_remarks || '').toLowerCase().includes(q)
+      )
+    : allTxRows;
+  renderTxTable(filtered);
+}
+
+function renderTxTable(rows) {
+  const tbody = document.getElementById('tx-tbody');
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="icon">🗃️</div><p>No transactions found.</p></div></td></tr>';
+    document.getElementById('tx-pagination').innerHTML = '';
+    return;
+  }
+
+  const TYPE_BADGE = {
+    UPI: 'badge-purple', IMPS: 'badge-blue', NEFT: 'badge-green',
+    RTGS: 'badge-orange', INTEREST: 'badge-gray', OTHER: 'badge-gray'
+  };
+
+  tbody.innerHTML = rows.map((r, i) => `
+    <tr>
+      <td style="color:var(--text-muted);font-size:11px">${r.sno || i+1}</td>
+      <td style="white-space:nowrap;font-size:12px">${fmtDate(r.transaction_date)}</td>
+      <td>
+        <div style="font-weight:700;font-size:13px">${r.sender_name || '<span style="color:var(--text-muted)">Unknown</span>'}</div>
+        <div style="font-size:10px;color:var(--text-muted)">${r.upi_id || ''}</div>
+      </td>
+      <td style="font-size:11px;color:var(--text-muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+          title="${(r.transaction_remarks||'').replace(/"/g,"'")}">
+        ${truncate(r.transaction_remarks, 45)}
+      </td>
+      <td class="${parseFloat(r.deposit_amount) > 0 ? 'amount-positive' : ''}">
+        ${parseFloat(r.deposit_amount) > 0 ? fmtMoney(r.deposit_amount) : '—'}
+      </td>
+      <td class="${parseFloat(r.withdrawal_amount) > 0 ? 'amount-negative' : ''}">
+        ${parseFloat(r.withdrawal_amount) > 0 ? fmtMoney(r.withdrawal_amount) : '—'}
+      </td>
+      <td style="font-size:12px">${fmtMoney(r.balance)}</td>
+      <td><span class="badge-pill ${TYPE_BADGE[r.transaction_type] || 'badge-gray'}">${r.transaction_type}</span></td>
+      <td>
+        ${r.is_rent
+          ? '<span class="badge-pill badge-green">✓ Rent</span>'
+          : '<span class="badge-pill badge-gray">—</span>'}
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ─── Refresh ──────────────────────────────────────────────────────────────
+async function refreshAll() {
+  dashboardData = null; rentData = []; ledgerData = []; missedData = [];
+  toast('Refreshing data…', 'info');
+  await loadDashboard();
+  // Reload current page data if not dashboard
+  const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
+  if (activePage === 'rents') { rentData = []; loadRentData(); }
+  if (activePage === 'ledger') { ledgerData = []; loadLedger(); }
+  if (activePage === 'missed') { missedData = []; loadMissed(); }
+  if (activePage === 'transactions') loadTransactions();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  feather.replace();
+  await loadDashboard();
+});
+</script>
+</body>
+</html>

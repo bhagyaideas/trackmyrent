@@ -1,0 +1,33 @@
+{
+  "name": "trackmyrent",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "main": "server/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bhagyaideas/trackmyrent.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/bhagyaideas/trackmyrent/issues"
+  },
+  "homepage": "https://github.com/bhagyaideas/trackmyrent#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dayjs": "^1.11.21",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "moment": "^2.30.1",
+    "multer": "^2.2.0",
+    "mysql2": "^3.22.5",
+    "xlsx": "^0.18.5"
+  }
+}
