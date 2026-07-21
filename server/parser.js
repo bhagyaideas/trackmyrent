@@ -5,6 +5,19 @@
 
 const XLSX = require('xlsx');
 
+// Specific sender names (display names or partial matches) that should NEVER
+// be treated as tenants / rent payers — e.g. family members, business contacts.
+// Match is case-insensitive and checks sender_name as well as raw remarks.
+const EXCLUDED_SENDERS = [
+  'M Hanumanta Rao',
+  'Hanumanta Rao',
+  'Ravuluri Gopireddy',
+  'Gopireddy',
+  'Teekshana',
+  'Sugandha M',
+  'Sugandha',
+];
+
 // Known non-rent senders to exclude
 const EXCLUDE_KEYWORDS = [
   'netflix', 'amazon', 'airtel', 'autopay', 'phonepe', 'bbpsbp',
@@ -182,7 +195,13 @@ function toTitleCase(str) {
 
 function isExcluded(remarks, senderName) {
   const combined = ((remarks || '') + ' ' + (senderName || '')).toLowerCase();
-  return EXCLUDE_KEYWORDS.some(kw => combined.includes(kw));
+  if (EXCLUDE_KEYWORDS.some(kw => combined.includes(kw))) return true;
+  // Check against the explicit sender exclusion list (case-insensitive partial match)
+  if (senderName) {
+    const nameLower = senderName.toLowerCase();
+    if (EXCLUDED_SENDERS.some(ex => nameLower.includes(ex.toLowerCase()) || ex.toLowerCase().includes(nameLower))) return true;
+  }
+  return false;
 }
 
 function parseDate(dateStr) {
@@ -314,4 +333,4 @@ function parseExcel(buffer) {
   };
 }
 
-module.exports = { parseExcel, extractSenderInfo };
+module.exports = { parseExcel, extractSenderInfo, EXCLUDED_SENDERS };

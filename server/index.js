@@ -30,7 +30,7 @@ function buildTxHash(tx) {
 }
 
 const db = require('./db');
-const { parseExcel } = require('./parser');
+const { parseExcel, EXCLUDED_SENDERS } = require('./parser');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -50,6 +50,29 @@ const PORT = process.env.PORT || 3001;
   } catch (e) {
     // Older MySQL may not support IF NOT EXISTS on ALTER – ignore gracefully
     if (!e.message.includes('Duplicate column')) console.warn('Migration note:', e.message);
+  }
+})();
+
+// ─── Fix existing rows: un-mark rent for excluded senders ──────────────────
+(async () => {
+  try {
+    if (!EXCLUDED_SENDERS || EXCLUDED_SENDERS.length === 0) return;
+    // Build LIKE conditions for each excluded sender
+    const conditions = EXCLUDED_SENDERS.map(() => 'sender_name LIKE ?').join(' OR ');
+    const params = EXCLUDED_SENDERS.map(s => `%${s}%`);
+    const [txResult] = await db.query(
+      `UPDATE transactions SET is_rent = 0 WHERE is_rent = 1 AND (${conditions})`,
+      params
+    );
+    const [tenantResult] = await db.query(
+      `DELETE FROM tenants WHERE (${conditions})`,
+      params
+    );
+    if (txResult.affectedRows > 0 || tenantResult.affectedRows > 0) {
+      console.log(`✅ Exclusion cleanup: ${txResult.affectedRows} tx un-marked, ${tenantResult.affectedRows} tenant(s) removed`);
+    }
+  } catch (e) {
+    console.warn('Exclusion cleanup warning:', e.message);
   }
 })();
 
